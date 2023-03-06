@@ -16,6 +16,7 @@ export const db = new sqlite3.Database(DBSOURCE, err => {
     db.run(
       `CREATE TABLE IF NOT EXISTS chats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        creationTime DATETIME DEFAULT CURRENT_TIMESTAMP,
         like BOOLEAN,
         temperature REAL,
         top_p REAL,
