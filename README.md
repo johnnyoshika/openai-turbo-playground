@@ -88,3 +88,11 @@ WantedBy=multi-user.target
 
 Enable our service for autostart: `sudo systemctl enable openai-turbo-playground`
 Start: `sudo systemctl start openai-turbo-playground`
+
+## Data
+
+Responses will be stored in data.sqlite. To get all chats that have been liked or disliked, execute this query:
+
+```
+sqlite> select id, temperature, top_p, like from chats where like is not null;
+```
