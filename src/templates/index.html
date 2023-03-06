@@ -7,8 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OpenAI Turbo Playground</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/fontawesome.min.css"
-    integrity="sha384-QYIZto+st3yW+o8+5OHfT6S482Zsvz2WfOzpFSXMF9zqeLcFV0/wlZpMtyFcZALm" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
 </head>
 
 <body style="margin: 36px auto; max-width: 940px;">
@@ -18,7 +17,8 @@
         temperature
       </div>
       <div class="column is-10">
-        <input type="number" min="0" max="2" step="0.1" class="input" name="temperature" placeholder="temperature" value="1" />
+        <input type="number" min="0" max="2" step="0.1" class="input" name="temperature" placeholder="temperature"
+          value="1" />
       </div>
     </div>
     <div class="columns is-mobile mt-3">
@@ -35,7 +35,7 @@
       </div>
       <div class="column is-10">
         <div class="control">
-          <button type="Submit" class="button is-link is-fullwidth">Send</button>
+          <button type="Submit" class="button is-info is-fullwidth is-medium">Send</button>
         </div>
       </div>
     </div>
@@ -58,17 +58,17 @@
       <div class="column is-10">
         <div class="field is-grouped">
           <div class="control is-expanded">
-            <textarea class="textarea" placeholder="Content" rows="10">{{content}}</textarea>
+            <textarea class="textarea" placeholder="Content" rows="6">{{content}}</textarea>
           </div>
           <div class="control">
-            <a class="button is-info">
+            <a class="button is-danger is-small">
               <span class="icon is-small">
-                <i data-remove class="fas fa-x"></i>
+                <i data-remove class="fas fa-minus"></i>
               </span>
             </a>
           </div>
           <div class="control">
-            <a class="button is-info">
+            <a class="button is-success is-small">
               <span class="icon is-small">
                 <i data-add class="fas fa-plus"></i>
               </span>
@@ -85,9 +85,14 @@
         <p class="card-header-title">
           AI Response
         </p>
-        <button class="card-header-icon" aria-label="more options">
+        <button class="card-header-icon">
           <span class="icon">
-            <i class="fas fa-angle-down" aria-hidden="true"></i>
+            <i data-dislike data-value="false" class="far fa-thumbs-down has-text-black"></i>
+          </span>
+        </button>
+        <button class="card-header-icon">
+          <span class="icon">
+            <i data-like data-value="false" class="far fa-thumbs-up has-text-black"></i>
           </span>
         </button>
       </header>
@@ -98,15 +103,15 @@
           </div>
           <div class="tags has-addons is-inline">
             <span class="tag">Total Tokens</span>
-            <span class="tag is-info">{{total_tokens}}</span>
+            <span class="tag is-warning">{{total_tokens}}</span>
           </div>
           <div class="tags has-addons is-inline ml-4">
             <span class="tag">Prompt Tokens</span>
-            <span class="tag is-info">{{prompt_tokens}}</span>
+            <span class="tag is-warning">{{prompt_tokens}}</span>
           </div>
           <div class="tags has-addons is-inline ml-4">
             <span class="tag">Completion Tokens</span>
-            <span class="tag is-info">{{completion_tokens}}</span>
+            <span class="tag is-warning">{{completion_tokens}}</span>
           </div>
         </div>
       </div>
@@ -115,6 +120,7 @@
 
   <script>
     (function () {
+      let chatId = null;
       const initialMessages = [{ role: 'system', content: "You're a teacher's assistant. When I give you a question, respond with the correct answer and a good explanation." }, { role: 'user', content: '' }];
       const messageTemplate = document.getElementById('message').innerHTML;
       const resultTemplate = document.getElementById('result').innerHTML;
@@ -192,6 +198,7 @@
         })
           .then(response => response.json())
           .then(data => {
+            chatId = data.id;
             const result = resultTemplate
               .replace('{{total_tokens}}', data.usage.total_tokens)
               .replace('{{prompt_tokens}}', data.usage.prompt_tokens)
@@ -204,6 +211,73 @@
             alert(error.message);
             endLoading();
           });
+      });
+
+
+      const setLike = (like /* boolean | null */) => {
+        if (!chatId) return;
+
+        fetch(`/like/${chatId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ like })
+        })
+          .catch(error => {
+            alert(error.message);
+          });
+
+        const likeOn = () => {
+          document.querySelector('[data-like]').dataset.value = 'true';
+          document.querySelector('[data-like]').classList.remove('far', 'has-text-black');
+          document.querySelector('[data-like]').classList.add('fas', 'has-text-success');
+        }
+
+        const likeOff = () => {
+          document.querySelector('[data-like]').dataset.value = 'false';
+          document.querySelector('[data-like]').classList.remove('fas', 'has-text-success');
+          document.querySelector('[data-like]').classList.add('far', 'has-text-black');
+        }
+
+        const dislikeOn = () => {
+          document.querySelector('[data-dislike]').dataset.value = 'true';
+          document.querySelector('[data-dislike]').classList.remove('far', 'has-text-black');
+          document.querySelector('[data-dislike]').classList.add('fas', 'has-text-danger');
+        }
+
+        const dislikeOff = () => {
+          document.querySelector('[data-dislike]').dataset.value = 'false';
+          document.querySelector('[data-dislike]').classList.remove('fas', 'has-text-danger');
+          document.querySelector('[data-dislike]').classList.add('far', 'has-text-black');
+        }
+
+        if (like) {
+          likeOn();
+          dislikeOff();
+        }
+
+        if (!like) {
+          likeOff();
+          dislikeOn();
+        }
+
+        if (like === null) {
+          likeOff();
+          dislikeOff();
+        }
+      };
+
+      document.getElementById('results').addEventListener('click', function (event) {
+        if (!event.target) return;
+
+        if (event.target.matches('[data-like]') || event.target.querySelector('[data-like]')) {
+          setLike((event.target.dataset.value ?? event.target.querySelector('[data-like]').dataset.value) === 'false' ? true : null);
+        }
+
+        if (event.target.matches('[data-dislike]') || event.target.querySelector('[data-dislike]')) {
+          setLike((event.target.dataset.value ?? event.target.querySelector('[data-dislike]').dataset.value) === 'false' ? false : null);
+        }
       });
     })();
   </script>
