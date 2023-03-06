@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenAI Turbo Playground</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/fontawesome.min.css"
+    integrity="sha384-QYIZto+st3yW+o8+5OHfT6S482Zsvz2WfOzpFSXMF9zqeLcFV0/wlZpMtyFcZALm" crossorigin="anonymous" />
+</head>
+
+<body style="margin: 36px auto; max-width: 940px;">
+  <form id="form">
+    <div class="columns is-mobile mt-3">
+      <div class="column is-2 has-text-right">
+        temperature
+      </div>
+      <div class="column is-10">
+        <input type="number" min="0" max="2" step="0.1" class="input" name="temperature" placeholder="temperature" value="1" />
+      </div>
+    </div>
+    <div class="columns is-mobile mt-3">
+      <div class="column is-2 has-text-right">
+        top_p
+      </div>
+      <div class="column is-10">
+        <input type="number" min="0" max="1" step="0.1" class="input" name="top_p" placeholder="top_p" value="1" />
+      </div>
+    </div>
+    <div id="messages"></div>
+    <div class="columns is-mobile mt-3">
+      <div class="column is-2">
+      </div>
+      <div class="column is-10">
+        <div class="control">
+          <button type="Submit" class="button is-link is-fullwidth">Send</button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div id="results" class="mt-6"></div>
+
+  <script id="message" type="text/html">
+    <div data-message class="columns is-mobile">
+      <div class="column is-2">
+        <div class="select is-fullwidth">
+          <select>
+            <option value="">Select Role</option>
+            <option value="assistant">Assistant</option>
+            <option value="system">System</option>
+            <option value="user">User</option>
+          </select>
+        </div>
+      </div>
+      <div class="column is-10">
+        <div class="field is-grouped">
+          <div class="control is-expanded">
+            <textarea class="textarea" placeholder="Content" rows="10">{{content}}</textarea>
+          </div>
+          <div class="control">
+            <a class="button is-info">
+              <span class="icon is-small">
+                <i data-remove class="fas fa-x"></i>
+              </span>
+            </a>
+          </div>
+          <div class="control">
+            <a class="button is-info">
+              <span class="icon is-small">
+                <i data-add class="fas fa-plus"></i>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script id="result" type="text/html">
+    <div class="card">
+      <header class="card-header">
+        <p class="card-header-title">
+          AI Response
+        </p>
+        <button class="card-header-icon" aria-label="more options">
+          <span class="icon">
+            <i class="fas fa-angle-down" aria-hidden="true"></i>
+          </span>
+        </button>
+      </header>
+      <div class="card-content">
+        <div class="content">
+          <div class="mb-5">
+            {{message}}
+          </div>
+          <div class="tags has-addons is-inline">
+            <span class="tag">Total Tokens</span>
+            <span class="tag is-info">{{total_tokens}}</span>
+          </div>
+          <div class="tags has-addons is-inline ml-4">
+            <span class="tag">Prompt Tokens</span>
+            <span class="tag is-info">{{prompt_tokens}}</span>
+          </div>
+          <div class="tags has-addons is-inline ml-4">
+            <span class="tag">Completion Tokens</span>
+            <span class="tag is-info">{{completion_tokens}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script>
+    (function () {
+      const initialMessages = [{ role: 'system', content: "You're a teacher's assistant. When I give you a question, respond with the correct answer and a good explanation." }, { role: 'user', content: '' }];
+      const messageTemplate = document.getElementById('message').innerHTML;
+      const resultTemplate = document.getElementById('result').innerHTML;
+
+      const messageHtml = (message) => messageTemplate.replace('{{content}}', message.content).replace(`<option value="${message.role}">`, `<option value="${message.role}" selected>`);
+
+      const insertMessageAfter = (message, sibling) => {
+        sibling.insertAdjacentHTML('afterend', messageHtml(message));
+      };
+
+      const insertMessageAtEnd = (message) => {
+        const lastMessage = document.querySelector('[data-message]:last-child');
+        if (lastMessage)
+          insertMessageAfter(message, lastMessage);
+        else
+          document.getElementById('messages').innerHTML += messageHtml(message);
+      };
+
+      const hydrate = (messages) => {
+        messages.forEach(insertMessageAtEnd);
+      };
+
+      hydrate(initialMessages);
+
+      document.getElementById('messages').addEventListener('click', function (event) {
+        if (!event.target || (!event.target.matches('[data-add]') && (!event.target.querySelector('[data-add]')))) return;
+        insertMessageAfter({ role: '', content: '' }, event.target.closest('[data-message]'));
+      });
+
+      document.getElementById('messages').addEventListener('click', function (event) {
+        if (!event.target || (!event.target.matches('[data-remove]') && (!event.target.querySelector('[data-remove]')))) return;
+        event.target.closest('[data-message]').remove();
+      });
+
+      document.getElementById('form').addEventListener('submit', function (e) {
+        const startLoading = () => {
+          const button = e.target.querySelector('button[type="submit"]');
+          button.classList.add('is-loading');
+          button.disabled = true;
+        };
+
+        const endLoading = () => {
+          const button = e.target.querySelector('button[type="submit"]');
+          button.classList.remove('is-loading');
+          button.disabled = false;
+        };
+
+        e.preventDefault();
+
+        startLoading();
+
+        const messages = [];
+        document.getElementById('form').querySelectorAll('[data-message]').forEach(element => {
+          const role = element.querySelector('select').value;
+          const content = element.querySelector('textarea').value;
+
+          if (role === '' || content.trim() === '') {
+            alert('Missing values');
+            endLoading();
+            throw new Error('Missing values');
+          }
+
+          messages.push({ role, content });
+        });
+
+        const temperature = parseFloat(e.target.querySelector('input[name="temperature"]').value);
+        const top_p = parseFloat(e.target.querySelector('input[name="top_p"]').value);
+
+        fetch('/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ temperature, top_p, messages })
+        })
+          .then(response => response.json())
+          .then(data => {
+            const result = resultTemplate
+              .replace('{{total_tokens}}', data.usage.total_tokens)
+              .replace('{{prompt_tokens}}', data.usage.prompt_tokens)
+              .replace('{{completion_tokens}}', data.usage.completion_tokens)
+              .replace('{{message}}', data.message.replace(/\n/g, '<br />'));
+            document.querySelector('#results').innerHTML = result;
+            endLoading();
+          })
+          .catch(error => {
+            alert(error.message);
+            endLoading();
+          });
+      });
+    })();
+  </script>
+</body>
+
+</html>
