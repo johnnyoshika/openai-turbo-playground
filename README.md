@@ -1,20 +1,12 @@
-# Simple Node Application
+# OpenAI Turbo Playground
 
-Includes:
-
-- ES6 Modules
-- Typescript
-- Express
-- Debug support in VS Code
-
-Inspired by: https://medium.com/create-a-server-with-nodemon-express-typescript/create-a-server-with-nodemon-express-typescript-f7c88fb5ee71
+Playground to experiment with OpenAI's Turbo (i.e. ChatGPT) API.
 
 ## Setup
 
-- From the [repo](https://github.com/johnnyoshika/minimal-node-typescript), select `Use this template` -> `Create a new repository`.
-- Clone the new repo that was created.
-- Run `npm ci` to install dependencies.
-- Copy `.env.example` to `.env`.
+- Clone this repo
+- Run `npm ci` to install dependencies
+- Copy `.env.example` to `.env` and add OpenAI API Key
 
 ## Start
 
@@ -26,7 +18,7 @@ npm start
 
 <kbd>F5</kbd>
 
-_Note: Re-compile on file change isn't available in debug mode, so stop/start is required to reflect code changes._
+_Note: Re-compile on file change isn't available in debug mode, so stop/start is required to reflect code changes. Also, every time template/index.html is changed, `npm start` needs to run to copy the changed file to dist/templates folder._
 
 ## Build
 
@@ -39,14 +31,60 @@ Deployable build will be in `dist` folder.
 Command to run production app in Linux / macOS:
 
 ```
-NODE_PATH=dist/ node ./dist/index.js
+OPENAI_API_KEY={key}
+node index.js
 ```
 
 Command to run production app in Windows:
 
 ```
-$env:NODE_PATH="dist/"
-node ./dist/index.js
+$env:OPENAI_API_KEY="{key}"
+node index.js
 ```
 
-Explanation of `NODE_PATH=dist/`: https://stackoverflow.com/a/65867369/188740
+## Deploy to Raspberry Pi
+
+First make sure `projects/openai-turbo-playground` folder exists on the Raspberry Pi.
+
+```
+npm run build
+npm run copyfiles
+scp -rp dist/* pi:projects/openai-turbo-playground
+scp -rp node_modules pi:projects/openai-turbo-playground
+```
+
+Inside Raspberry Pi:
+
+```
+curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash
+source ~/.profile
+nvm install 16.13.2
+```
+
+Create Service:
+
+```
+sudo nano /etc/systemd/system/openai-turbo-playground.service
+```
+
+Set contents of the file to:
+
+```
+[Unit]
+Description=OpenAI Turbo Playground
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/projects/openai-turbo-playground
+Environment=PORT=8888
+Environment=OPENAI_API_KEY={key}
+ExecStart=/home/pi/.nvm/versions/node/v16.13.2/bin/node /home/pi/projects/openai-turbo-playground/index.js
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable our service for autostart: `sudo systemctl enable openai-turbo-playground`
+Start: `sudo systemctl start openai-turbo-playground`
