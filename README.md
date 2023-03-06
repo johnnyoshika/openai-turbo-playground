@@ -50,7 +50,7 @@ First make sure `projects/openai-turbo-playground` folder exists on the Raspberr
 npm run build
 npm run copyfiles
 scp -rp dist/* pi:projects/openai-turbo-playground
-scp -rp node_modules pi:projects/openai-turbo-playground
+scp -rp package* pi:projects/openai-turbo-playground
 ```
 
 Inside Raspberry Pi:
@@ -59,6 +59,7 @@ Inside Raspberry Pi:
 curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash
 source ~/.profile
 nvm install 16.13.2
+npm ci
 ```
 
 Create Service:
