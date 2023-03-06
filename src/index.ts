@@ -4,7 +4,7 @@ const app = express();
 import * as fs from 'fs';
 import * as path from 'path';
 import { Configuration, OpenAIApi } from 'openai';
-import { db } from 'database';
+import { db } from './database';
 
 app.use(express.json());
 
