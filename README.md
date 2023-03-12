@@ -97,3 +97,40 @@ Responses will be stored in data.sqlite. To get all chats that have been liked o
 ```
 sqlite> select id, temperature, top_p, like from chats where like is not null;
 ```
+
+Query that returns id and first message content (pulling first content from messages JSON array):
+
+```
+SELECT id, json_extract(messages, '$[0].content') AS content FROM chats where like = 1 order by id;
+```
+
+Assuming a description column is added:
+
+```
+ALTER TABLE chats
+ADD COLUMN column TEXT;
+```
+
+...tag all descriptions with `Bloom's taxonomy` if the `Bloom` appears in content of first message:
+
+```
+UPDATE chats
+SET description = 'Bloom''s taxonomy'
+WHERE like = 1
+  AND description IS NULL
+  AND json_extract(messages, '$[0].content') LIKE '%Bloom%'
+```
+
+Other useful queries:
+
+```
+.header on
+.mode column
+.width 10 30 10 10 200
+SELECT id, description, temperature, top_p, json_extract(messages, '$[0].content') AS content FROM chats where like = 1 order by id;
+```
+
+```
+.mode line
+SELECT id, temperature, top_p, json_extract(messages, '$[0].role') AS role, json_extract(messages, '$[0].content') AS content FROM chats where id = {id};
+```
